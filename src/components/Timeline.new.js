@@ -21,6 +21,35 @@ const CalendarView = ({
   onClearAllEvents,
   lastSaved
 }) => {
+  // Click outside handler for color picker
+  useEffect(() => {
+    if (Object.keys(colorPickers).length === 0) return;
+    
+    const handleClick = (e) => {
+      const clickedElement = e.target;
+      const dateElement = clickedElement.closest('.day');
+      
+      if (!dateElement) {
+        // Clicked outside any day, close all pickers
+        onToggleColorPicker();
+        return;
+      }
+      
+      const dateKey = Array.from(dateElement.querySelectorAll('[data-date]'))[0]?.dataset.date;
+      if (!dateKey) return;
+      
+      const isColorPicker = clickedElement.closest('.color-picker');
+      const isAddButton = clickedElement.closest('.add-event-btn');
+      
+      if (!isColorPicker && !isAddButton) {
+        onToggleColorPicker();
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [colorPickers, onToggleColorPicker]);
+
   const renderMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -43,7 +72,7 @@ const CalendarView = ({
       const isToday = format(new Date(), 'yyyy-MM-dd') === dateKey;
       
       days.push(
-        <div key={dateKey} className={`day ${isToday ? 'today' : ''}`}>
+        <div key={dateKey} className={`day ${isToday ? 'today' : ''}`} data-date={dateKey}>
           <div className="day-header">
             <span className="day-number">{day}</span>
             <button 
@@ -161,12 +190,17 @@ const Timeline = () => {
   // Event handlers
   const toggleColorPicker = useCallback((date) => {
     if (!isClient) return;
-    const dateKey = format(date, 'yyyy-MM-dd');
-    setColorPickers(prev => ({
-      ...prev,
-      [dateKey]: !prev[dateKey]
-    }));
-  }, [isClient]);
+    
+    const dateKey = date ? format(date, 'yyyy-MM-dd') : null;
+    
+    // If clicking the same date's button, toggle it
+    if (dateKey && colorPickers[dateKey]) {
+      setColorPickers({});
+    } else {
+      // Otherwise, open the clicked date's picker
+      setColorPickers(dateKey ? { [dateKey]: true } : {});
+    }
+  }, [isClient, colorPickers]);
 
   const handleAddEvent = useCallback((date, color = null) => {
     if (!isClient) return;
