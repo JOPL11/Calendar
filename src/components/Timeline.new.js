@@ -8,6 +8,31 @@ import SplashScreen from './Splashscreen';
 import { saveToFile, openFromFile } from '../utils/fileHandlers';
 
 // Calendar View Component
+const EventPreview = ({ content, position }) => {
+  console.log('Rendering preview with:', { content, position });
+  if (!content) return null;
+  
+  return (
+    <div 
+      className="event-preview"
+      style={{
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        zIndex: 1000,
+        background: 'white',
+        border: '1px solid red',
+        padding: '10px',
+        maxWidth: '300px',
+        maxHeight: '300px',
+        overflow: 'auto'
+      }}
+    >
+      <div>PREVIEW: {content}</div>
+    </div>
+  );
+};
+
 const CalendarView = ({
   months,
   events,
@@ -21,6 +46,36 @@ const CalendarView = ({
   onClearAllEvents,
   lastSaved
 }) => {
+  const [preview, setPreview] = useState({
+    content: '',
+    position: { x: 0, y: 0 },
+    show: false
+  });
+  
+  const handleEventHover = (e, event) => {
+    console.log('Hovering over event:', event);
+    if (!event?.text) {
+      console.log('No text in event');
+      return;
+    }
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const newPosition = { 
+      x: rect.right + 10, 
+      y: rect.top + window.scrollY
+    };
+    
+    console.log('Setting preview at position:', newPosition);
+    setPreview({
+      content: event.text,
+      position: newPosition,
+      show: true
+    });
+  };
+  
+  const handleEventLeave = () => {
+    setPreview(prev => ({ ...prev, show: false }));
+  };
   // Click outside handler for color picker
   useEffect(() => {
     if (Object.keys(colorPickers).length === 0) return;
@@ -100,7 +155,13 @@ const CalendarView = ({
           </div>
           <div className="events">
             {dayEvents.map(event => (
-              <div key={event.id} className={`event ${event.color || ''}`}>
+              <div 
+                key={event.id} 
+                className={`event ${event.color || ''}`}
+                onMouseEnter={(e) => handleEventHover(e, event)}
+                onMouseLeave={handleEventLeave}
+                style={{ position: 'relative' }}
+              >
                 <input
                   type="text"
                   value={event.text}
@@ -108,6 +169,12 @@ const CalendarView = ({
                   className="event-input"
                   placeholder="Event..."
                 />
+                {preview.show && preview.content === event.text && (
+                  <EventPreview 
+                    content={preview.content}
+                    position={preview.position}
+                  />
+                )}
               </div>
             ))}
           </div>

@@ -1,3 +1,38 @@
+/* Reset all input elements */
+input,
+input:focus,
+input:active,
+input:hover,
+input:focus-visible,
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-internal-autofill-selected {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  border: none !important;
+  background-image: none !important;
+  background-color: transparent !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+/* Remove Firefox's dotted outline */
+::-moz-focus-inner {
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+/* Remove dashed outline from event content */
+.event-content {
+  outline: none !important;
+}
+
 /* Base styles */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -138,6 +173,16 @@ body {
 
 .timeline-event {
   margin-bottom: 0.5rem;
+  position: relative;
+  width: 100%;
+}
+
+.event-content {
+  position: relative;
+  width: 100%;
+  /* Temporary debug style */
+  outline: 1px dashed rgba(255, 0, 0, 0.3);
+  min-height: 20px;
 }
 
 .event-input {
@@ -160,6 +205,60 @@ body {
 .event-input.blue { border-left: 3px solid #3b82f6; background-color: #eff6ff; }
 .event-input.green { border-left: 3px solid #10b981; background-color: #ecfdf5; }
 .event-input.yellow { border-left: 3px solid #f59e0b; background-color: #fffbeb; }
+
+/* Event Preview */
+.event-preview {
+  position: fixed;
+  z-index: 10000;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 1rem;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  transform: translateY(-50%);
+  margin-top: 1rem;
+}
+
+.event-preview-content {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+.event-preview-content h1,
+.event-preview-content h2,
+.event-preview-content h3,
+.event-preview-content h4,
+.event-preview-content h5,
+.event-preview-content h6 {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.event-preview-content p {
+  margin: 0.5em 0;
+}
+
+.event-preview-content ul,
+.event-preview-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.event-preview-content a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.event-preview-content a:hover {
+  text-decoration: underline;
+}
 
 /* No events message */
 .no-events {
@@ -543,15 +642,157 @@ body {
   border-left: 3px solid #f59e0b;
 }
 
+/* Event styling */
+.event {
+  position: relative;
+  margin: 2px 0;
+  background: white;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* Remove focus outlines */
+.event input:focus,
+.event input:focus-visible,
+.event:focus-within,
+.event:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Remove dotted outline in Firefox */
+.event input::-moz-focus-inner {
+  border: 0;
+}
+
+/* Remove dotted outline in Firefox */
+.event input[type="text"]::-moz-focusring {
+  color: transparent;
+  text-shadow: 0 0 0 #000;
+}
+
+/* Remove all focus indicators */
+.event input[type="text"],
+.event input[type="text"]:focus,
+.event input[type="text"]:focus-visible,
+.event input[type="text"]:active,
+.event input[type="text"]:hover {
+  outline: none !important;
+  outline-width: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Remove Firefox's inner focus ring */
+.event input[type="text"]::-moz-focus-inner {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Firefox specific focus ring removal */
+.event input[type="text"]:focus {
+  outline: 1px solid transparent !important;
+  outline-offset: -1px !important;
+}
+
+/* Remove dotted outline in Firefox */
+.event input[type="text"]:focus:-moz-focusring {
+  color: transparent !important;
+  text-shadow: 0 0 0 #000 !important;
+}
+
+/* Remove Edge's focus ring */
+.event input[type="text"]::-ms-clear,
+.event input[type="text"]::-ms-reveal {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Remove Chrome's autofill background */
+.event input[type="text"]:-webkit-autofill,
+.event input[type="text"]:-webkit-autofill:hover,
+.event input[type="text"]:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: black !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+/* Colored border on the left */
+.event::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #e5e7eb; /* Default gray border */
+}
+
+/* Color variations */
+.event.red::before { background: #ef4444; }
+.event.blue::before { background: #3b82f6; }
+.event.green::before { background: #22c55e; }
+.event.yellow::before { background: #eab308; }
+
+/* Input styling */
+.event-input {
+  width: 100%;
+  padding: 4px 8px 4px 12px;
+  border: 1px solid #e5e7eb;
+  border-left: none;
+  border-radius: 0 2px 2px 0;
+  background: white;
+  font-size: 0.9em;
+}
+
+.event-input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 1px #93c5fd;
+}
+
 /* Base input styling */
 .event-input {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.125rem;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
-  transition: all 0.2s;
-  background-color: white;
+  color: #1f2937;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+  outline: none !important;
+  outline-offset: 0 !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Remove focus outline for all browsers */
+.event-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Firefox specific */
+.event-input::-moz-focus-inner {
+  border: 0 !important;
 }
 
 .event-input:focus {
