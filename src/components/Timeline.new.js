@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import { format, getDaysInMonth, startOfMonth, getDay, addMonths } from 'date-fns';
 import '../app/globals.css';
-import SplashScreen from './Splashscreen';
+import SplashScreen from './SplashScreen';
 import { saveToFile, openFromFile } from '../utils/fileHandlers';
 
 // Calendar View Component

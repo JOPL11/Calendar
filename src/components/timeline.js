@@ -1,11 +1,110 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { format, getDaysInMonth, startOfMonth, getDay, addMonths } from 'date-fns';
 import '../app/globals.css';
-import SplashScreen from './Splashscreen';
+import SplashScreen from './SplashScreen';
 import { saveToFile, openFromFile } from '../utils/fileHandlers';
+
+const COLORS = [
+  { name: 'red', value: '#ef4444' },
+  { name: 'blue', value: '#3b82f6' },
+  { name: 'green', value: '#10b981' },
+  { name: 'yellow', value: '#f59e0b' },
+];
+
+const EventEditor = ({ date, event, onSave, onClose }) => {
+  const [title, setTitle] = useState(event?.text || '');
+  const [content, setContent] = useState(event?.content || '');
+  const [selectedColor, setSelectedColor] = useState(event?.color || 'blue');
+  const popupRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      ...event,
+      text: title,
+      content: content,
+      color: selectedColor
+    });
+    onClose();
+  };
+  
+  const handleColorSelect = (color) => {
+    setSelectedColor(color);
+  };
+
+  if (!event) return null;
+
+  return (
+    <div className="event-editor-overlay">
+      <div ref={popupRef} className="event-editor">
+        <div className="event-editor-header">
+          <div 
+            className="event-header-bg"
+            style={{ 
+              '--event-color': COLORS.find(c => c.name === selectedColor)?.value || '#3b82f6'
+            }}
+          >
+            <div className="event-title-row">
+              <h3>Edit Event - {format(date, 'MMMM d, yyyy')}</h3>
+              <div 
+                className="color-indicator"
+                title={`Event color: ${selectedColor}`}
+              >
+                ✓
+              </div>
+            </div>
+            <button onClick={onClose} className="close-button">×</button>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="event-title-input"
+              placeholder="Event title"
+              autoFocus
+            />
+          </div>
+          <div className="form-group">
+            <label>Content</label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="event-content-input"
+              placeholder="Event content (HTML supported)"
+              rows={8}
+            />
+          </div>
+          <div className="form-actions">
+            <button type="button" onClick={onClose} className="cancel-button">
+              Cancel
+            </button>
+            <button type="submit" className="save-button">
+              Save Event
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 // Calendar View Component
 const CalendarView = ({
@@ -21,6 +120,39 @@ const CalendarView = ({
   onClearAllEvents,
   lastSaved
 }) => {
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editingDate, setEditingDate] = useState(null);
+
+  const handleAddEventWithPopup = (date, color) => {
+    const newEvent = {
+      id: Date.now(),
+      text: '',
+      content: '',
+      color
+    };
+    onAddEvent(date, color);
+    setEditingEvent(newEvent);
+    setEditingDate(date);
+  };
+
+  const handleSaveEvent = (updatedEvent) => {
+    if (editingDate) {
+      // Sanitize the content before saving
+      const sanitizedEvent = {
+        ...updatedEvent,
+        content: DOMPurify.sanitize(updatedEvent.content, { 
+          ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3'],
+          ALLOWED_ATTR: ['href', 'target', 'rel']
+        })
+      };
+      
+      // Update both text and content fields
+      onEventChange(editingDate, sanitizedEvent.id, 'text', sanitizedEvent.text);
+      onEventChange(editingDate, sanitizedEvent.id, 'content', sanitizedEvent.content);
+      setEditingEvent(null);
+      setEditingDate(null);
+    }
+  };
   const renderMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -66,7 +198,7 @@ const CalendarView = ({
                         className={`color-option ${color}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAddEvent(currentDate, color);
+                          handleAddEventWithPopup(currentDate, color);
                           onToggleColorPicker(currentDate);
                         }}
                         aria-label={`Add ${color} event`}
@@ -85,6 +217,7 @@ const CalendarView = ({
                   <input
                     type="text"
                     value={event.text}
+                    onClick={() => handleEventClick(event, currentDate)}
                     onChange={(e) => onEventChange(currentDate, event.id, e.target.value)}
                     className={`event-input ${event.color || ''}`}
                     placeholder="Add event..."
@@ -100,8 +233,27 @@ const CalendarView = ({
     });
   };
 
+  const handleEventClick = (event, date) => {
+    // Open the editor when an event is clicked
+    if (event) {
+      setEditingEvent({...event});
+      setEditingDate(date);
+    }
+  };
+
   return (
     <div className="timeline-container">
+      {editingEvent && (
+        <EventEditor
+          date={editingDate}
+          event={editingEvent}
+          onSave={handleSaveEvent}
+          onClose={() => {
+            setEditingEvent(null);
+            setEditingDate(null);
+          }}
+        />
+      )}
       <div className="timeline-actions">
         <button 
           onClick={onSave} 
@@ -148,13 +300,24 @@ const CalendarView = ({
 // Main Timeline Component
 const Timeline = () => {
   // State declarations
-  const [months, setMonths] = useState([new Date(2025, 3, 1)]);
+  const [months, setMonths] = useState([new Date()]);
   const [events, setEvents] = useState({});
   const [colorPickers, setColorPickers] = useState({});
   const [isClient, setIsClient] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editingDate, setEditingDate] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
   const [fileHandle, setFileHandle] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
+  
+  // Toggle color picker visibility for a specific date
+  const toggleColorPicker = useCallback((date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    setColorPickers(prev => ({
+      ...prev,
+      [dateKey]: !prev[dateKey]
+    }));
+  }, []);
   
   // Memoized values
   const dayNames = useMemo(() => 
@@ -172,58 +335,64 @@ const Timeline = () => {
   }, []);
   
   // Event handlers
-  const toggleColorPicker = useCallback((date) => {
-    if (!isClient) return;
-    const dateKey = format(date, 'yyyy-MM-dd');
-    setColorPickers(prev => ({
-      ...prev,
-      [dateKey]: !prev[dateKey]
-    }));
-  }, [isClient]);
+  const handleEventClick = useCallback((event, date) => {
+    // Open the editor when an event is clicked
+    if (event) {
+      setEditingEvent(JSON.parse(JSON.stringify(event))); // Deep clone the event
+      setEditingDate(new Date(date)); // Ensure date is a proper Date object
+    }
+  }, []);
 
   const handleAddEvent = useCallback((date, color = null) => {
     if (!isClient) return;
-    
     const dateKey = format(date, 'yyyy-MM-dd');
+    const newEventId = Date.now();
+    const newEvent = { 
+      id: newEventId, 
+      text: 'New Event',
+      content: '',
+      color: color || 'blue' // Default to blue if no color provided
+    };
+    
     setEvents(prev => ({
       ...prev,
-      [dateKey]: [...(prev[dateKey] || []), { 
-        id: Date.now(), 
-        text: '',
-        color: color || null
-      }]
+      [dateKey]: [...(prev[dateKey] || []), newEvent]
     }));
+    
+    // Open the editor for the new event
+    setEditingEvent(newEvent);
+    setEditingDate(date);
     
     setColorPickers(prev => ({
       ...prev,
       [dateKey]: false
     }));
+    
+    return newEventId;
   }, [isClient]);
 
-  const handleEventChange = useCallback((date, eventId, newText) => {
+  const handleEventChange = useCallback((date, eventId, field, value) => {
     if (!isClient) return;
-    
-    const cleanText = sanitize.sanitize(newText, {
-      ALLOWED_TAGS: [],
-      ALLOWED_ATTR: []
-    });
-    
     const dateKey = format(date, 'yyyy-MM-dd');
+    
+    // Sanitize HTML content if the field is 'content'
+    const sanitizedValue = field === 'content' 
+      ? DOMPurify.sanitize(value, { 
+          ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3'],
+          ALLOWED_ATTR: ['href', 'target', 'rel']
+        })
+      : value;
+    
     setEvents(prev => {
-      const updatedEvents = {
-        ...prev,
-        [dateKey]: (prev[dateKey] || []).map(event => 
-          event.id === eventId ? { ...event, text: cleanText } : event
-        )
-      };
-      
-      if (updatedEvents[dateKey] && updatedEvents[dateKey].length === 0) {
-        delete updatedEvents[dateKey];
+      const updatedEvents = { ...prev };
+      if (updatedEvents[dateKey]) {
+        updatedEvents[dateKey] = updatedEvents[dateKey].map(event =>
+          event.id === eventId ? { ...event, [field]: sanitizedValue } : event
+        );
       }
-      
       return updatedEvents;
     });
-  }, [isClient, sanitize]);
+  }, [isClient]);
   
   const clearAllEvents = useCallback(() => {
     if (window.confirm('Are you sure you want to clear all events? This cannot be undone.')) {
